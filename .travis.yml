@@ -6,6 +6,7 @@ env:
 - REPO=github.com/freman/dnspass
 script:
 - go get
+- GOOS=windows go get
 - mkdir -p release/{windows_{32bit,64bit},linux_{386,arm,amd64},osx}
 - CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "$LDFLAGS" -o release/linux_386/dnspass
   $REPO
