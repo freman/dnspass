@@ -11,8 +11,8 @@ script:
 - CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "$LDFLAGS" -o release/linux_386/dnspass $REPO
 - CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags "$LDFLAGS" -o release/linux_arm/dnspass $REPO
 - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/linux_amd64/dnspass $REPO
-- GOOS=windows GOARCH=386 go build -ldflags "$LDFLAGS" -o release/windows/32bit/dnspass $REPO
-- GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/windows/64bit/dnspass $REPO
+- GOOS=windows GOARCH=386 go build -ldflags "$LDFLAGS" -o release/windows/32bit/dnspass.exe $REPO
+- GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/windows/64bit/dnspass.exe $REPO
 - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/osx/dnspass $REPO
 - for i in release/{windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do cp config.toml $i; done
 - cd release
@@ -30,6 +30,7 @@ deploy:
     - release/linux_amd64.zip
     - release/linux_arm.zip
     - release/linux_386.zip
+    - release/osx.zip
   on:
     repo: freman/dnspass
     tags: true
