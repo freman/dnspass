@@ -20,7 +20,7 @@ script:
   $REPO
 - for i in release/{windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do cp config.toml
   $i; done
-- cd releases
+- cd release
 - for i in {windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do zip -r "$i_$TRAVIS_TAG.zip"
   $i; done;
 - cd ..
