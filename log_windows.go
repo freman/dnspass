@@ -32,7 +32,7 @@ func (hook *WinLogHook) Fire(entry *logrus.Entry) error {
 		os.Exit(1)
 		return nil
 	case logrus.FatalLevel:
-		return hook.Upstream.Error(2, line)
+		hook.Upstream.Error(2, line)
 		os.Exit(1)
 		return nil
 	case logrus.ErrorLevel:

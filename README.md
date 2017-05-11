@@ -32,6 +32,8 @@ You don't have to use google's servers as your trust, you can put any servers in
 
 ## Windows
 
+([More detailed instructions](WINDOWS.md))
+
 You'll need 2 files.
 
  * dnspass.exe
