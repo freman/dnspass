@@ -8,29 +8,28 @@ script:
 - go get
 - GOOS=windows go get
 - mkdir -p release/{windows_{32bit,64bit},linux_{386,arm,amd64},osx}
-- CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "$LDFLAGS" -o release/linux_386/dnspass
-  $REPO
-- CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags "$LDFLAGS" -o release/linux_arm/dnspass
-  $REPO
-- CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/linux_amd64/dnspass
-  $REPO
-- GOOS=windows GOARCH=386 go build -ldflags "$LDFLAGS" -o release/windows/32bit/dnspass
-  $REPO
-- GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/windows/64bit/dnspass
-  $REPO
-- for i in release/{windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do cp config.toml
-  $i; done
+- CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags "$LDFLAGS" -o release/linux_386/dnspass $REPO
+- CGO_ENABLED=0 GOOS=linux GOARCH=arm go build -ldflags "$LDFLAGS" -o release/linux_arm/dnspass $REPO
+- CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/linux_amd64/dnspass $REPO
+- GOOS=windows GOARCH=386 go build -ldflags "$LDFLAGS" -o release/windows/32bit/dnspass $REPO
+- GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/windows/64bit/dnspass $REPO
+- CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o release/osx/dnspass $REPO
+- for i in release/{windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do cp config.toml $i; done
 - cd release
-- for i in {windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do zip -r "$i_$TRAVIS_TAG.zip"
-  $i; done;
+- for i in {windows_{32bit,64bit},linux_{386,arm,amd64},osx}; do zip -r "$i.zip" $i; done;
 - cd ..
 deploy:
+  skip_cleanup: true
   provider: releases
   api_key:
     secure: Hf/B3KW6fTAuYhScBEl8CZ7l1zakh1jbL8+tXqPgiO10CkRBxmj1JMRZ06a2WNl0Qzqkz6b7s0MLPGypvNF8k5aVDPaJYdIoTgO3iiOnOXo7AFspqk8+Mj5W2H2u06yAEoG5ciF70yOtP2dPcX5NHTmtHBEWts9pKwK4APRBv2RIDzVOo5dHQw7NBBaiaDdEryvVtO3c62oXf/w8ccXjT0NLlaxCyoqBG3mfLB/c6DE8r41zOw/ZmNMhknztTnk+zqIZfJwQiGWMM5hJX9Wqg8UktC4JLq1mTY9lWQYJ8hEBnTp6ewxiF796F844sTLqs/erujGPcZQ9udhEJt0egdE8KenQIA47aQpKY31BbIPsH0qy3Q4slFU/T1tXkepqgMTofxlUDvR+8Q2mipue4ROPj2ixK+bqmqvl+juYm8Zg1hKuwm8cT67dZBWu1P5JPkpwxcqXwQnE1u7JFx5FI51sxGlkIFsL/+LqA32f0aq7wdLC6Cxi/nnqyDhpBovMOli2DWshsGFjD5DP4aAN9q5GPx7bqAymbIvG6Xu/Eua4YJ40Nq3WJR6zRYRUTc2A2Uf38TNU7xpRicbVxIrypbWCZe609500upVLb+wfIN1Qzqw2V7fY5bBGsGsqvxYEZXzR2h3gTDHqWVYaKIDDU8SAxyYGDJudTCFkdke1RuE=
   file_glob: true
   file:
-    - release/*.zip
+    - release/windows_32bit.zip
+    - release/windows_64bit.zip
+    - release/linux_amd64.zip
+    - release/linux_arm.zip
+    - release/linux_386.zip
   on:
     repo: freman/dnspass
     tags: true
