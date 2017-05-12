@@ -1,6 +1,7 @@
-package main
+package dnspass
 
 import (
+	"fmt"
 	"math/rand"
 	"net"
 	"time"
@@ -11,95 +12,150 @@ import (
 )
 
 var (
-	cache *lru.Cache
+	Version = "Undefined"
+	Commit  = "Undefined"
 )
 
-func init() {
-	rand.Seed(time.Now().Unix())
+// Server is the all the things a good server need
+type Server struct {
+	Log        logrus.FieldLogger
+	ConfigFile string
+	config     config
+	cache      *lru.Cache
+	rand       *rand.Rand
+	servers    []*dns.Server
+	stopping   bool
 }
 
-func doServer(configPath string, log logrus.FieldLogger) {
-	loadConfig(log, configPath)
-	cache, _ = lru.New(256)
-	dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
-		log := log.WithField("question", r.Question)
+// Run starts two listeners - one for tcp and one for udp
+func (s *Server) Run() error {
+	err := s.loadConfig()
+	if err != nil {
+		return fmt.Errorf("Unable to load configuration: %s", err)
+	}
 
-		proto := "tcp"
-		if _, ok := w.RemoteAddr().(*net.UDPAddr); ok {
-			proto = "udp"
-		}
+	s.cache, err = lru.New(256)
+	if err != nil {
+		return fmt.Errorf("Unable to construct cache: %s", err)
+	}
 
-		if len(r.Question) != 1 || r.Question[0].Qtype != dns.TypeA {
-			log.Debug("Question too complicated, just forwarding")
-			w.WriteMsg(forwardRequest(log, config.Untrust, proto, r))
-			return
-		}
+	s.setupRand()
 
-		q := r.Question[0]
+	s.servers = []*dns.Server{}
 
-		if _, found := cache.Get(q); !found {
-			in := forwardRequest(log, config.Untrust, proto, r)
-			if in.Rcode == dns.RcodeNameError {
-				w.WriteMsg(in)
-				return
-			}
-
-			bad := false
-			for _, ans := range in.Answer {
-				if a, ok := ans.(*dns.A); ok && config.BadHosts.isBad(a.A.String()) {
-					bad = true
-					break
-				}
-			}
-
-			if !bad {
-				w.WriteMsg(in)
-				return
-			}
-
-			log.Debug("Eww, ISP jiggered it")
-			cache.Add(q, emptyStruct)
-		}
-
-		log.Debug("Sending to trusted dns servers")
-		w.WriteMsg(forwardRequest(log, config.Trust, proto, r))
-	})
+	mux := dns.NewServeMux()
+	mux.Handle(".", s)
 
 	for _, proto := range []string{"udp", "tcp"} {
 		go func(proto string) {
-			l := log.WithFields(logrus.Fields{
-				"listen": config.Listen,
+			l := s.Log.WithFields(logrus.Fields{
+				"listen": s.config.Listen,
 				"proto":  proto,
 			})
-			server := &dns.Server{Addr: config.Listen, Net: proto}
+
+			server := &dns.Server{
+				Addr:    s.config.Listen,
+				Net:     proto,
+				Handler: mux,
+			}
+
+			s.servers = append(s.servers, server)
+
 			if err := server.ListenAndServe(); err != nil {
 				l.WithError(err).Fatal("Unable to listen")
 			}
 
-			l.Fatal("Server exited expectantly")
+			if !s.stopping {
+				l.Fatal("Server exited expectantly")
+			}
 		}(proto)
+	}
+
+	return nil
+}
+
+// Shutdown the listeners
+func (s *Server) Shutdown() {
+	s.stopping = true
+	for _, server := range s.servers {
+		server.Shutdown()
 	}
 }
 
-func forwardRequest(log logrus.FieldLogger, upstream []string, proto string, r *dns.Msg) (in *dns.Msg) {
+// ServeDNS implements the dns.Handler interface
+func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+	log := s.Log.WithField("question", r.Question)
+
+	proto := "tcp"
+	if _, ok := w.RemoteAddr().(*net.UDPAddr); ok {
+		proto = "udp"
+	}
+
+	if len(r.Question) != 1 || r.Question[0].Qtype != dns.TypeA {
+		log.Debug("Question too complicated, just forwarding")
+		w.WriteMsg(s.forwardRequest(s.config.Untrust, proto, r))
+		return
+	}
+
+	q := r.Question[0]
+
+	// Is the request known to result in poisoned DNS response?
+	if _, found := s.cache.Get(q); !found {
+		in := s.forwardRequest(s.config.Untrust, proto, r)
+		if in.Rcode == dns.RcodeNameError {
+			w.WriteMsg(in)
+			return
+		}
+
+		poisoned := false
+		for _, ans := range in.Answer {
+			if a, ok := ans.(*dns.A); ok && s.config.BadHosts.isBad(a.A.String()) {
+				poisoned = true
+				break
+			}
+		}
+
+		// Not poisoned, good reply
+		if !poisoned {
+			w.WriteMsg(in)
+			return
+		}
+
+		log.Warn("ISP Poisoned answer detected")
+		s.cache.Add(q, emptyStruct)
+	}
+
+	log.Debug("Sending to trusted DNS servers")
+	w.WriteMsg(s.forwardRequest(s.config.Trust, proto, r))
+}
+
+func (s *Server) setupRand() {
+	s.rand = rand.New(rand.NewSource(time.Now().Unix()))
+}
+
+func (s *Server) forwardRequest(peers []string, proto string, r *dns.Msg) (in *dns.Msg) {
 	var err error
-	for _, i := range rand.Perm(len(upstream)) {
+
+	// Try each server of the peer servers in order until one works or they all fail
+	for _, i := range s.rand.Perm(len(peers)) {
 		c := new(dns.Client)
 		c.Net = proto
-		in, _, err = c.Exchange(r, upstream[i])
+		in, _, err = c.Exchange(r, peers[i])
+
+		// One worked, yay
 		if err == nil {
-			return
+			return in
 		}
 	}
 
-	log.WithFields(logrus.Fields{
-		"upstream": upstream,
-		"proto":    proto,
-		"r":        r,
-		"lastErr":  err,
-	}).Debug("Failed to get answer from upstream")
+	s.Log.WithFields(logrus.Fields{
+		"peers":     peers,
+		"proto":     proto,
+		"request":   r,
+		"lastError": err,
+	}).Warn("Failed to get answer from peers")
 
 	in = new(dns.Msg)
 	in.SetRcode(r, dns.RcodeServerFailure)
-	return
+	return in
 }

@@ -2,7 +2,7 @@ language: go
 go:
 - 1.8.1
 env:
-- LDFLAGS="-X main.version=$TRAVIS_TAG -X main.commit=$TRAVIS_COMMIT" REPO=github.com/freman/dnspass
+- LDFLAGS="-X main.version=$TRAVIS_TAG -X main.commit=$TRAVIS_COMMIT" REPO=github.com/freman/dnspass/cmd/dnspass
 
 script:
 - go get
