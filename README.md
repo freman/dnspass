@@ -2,7 +2,7 @@
 
 Automagically bypass Australian internet filters
 
-This is crudely hacked together and comes with no warranty - it's also my first windows service
+This comes with no warranty - it's also my first windows service
 
 # How it works
 
