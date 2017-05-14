@@ -39,6 +39,16 @@ func (s *Server) Run() error {
 		return fmt.Errorf("Unable to construct cache: %s", err)
 	}
 
+	if s.config.AutoUpdatePoisonHosts {
+		go s.config.PoisonHosts.pullUpdate(s.Log)
+		go func() {
+			for {
+				time.Sleep(24 * time.Hour)
+				s.config.PoisonHosts.pullUpdate(s.Log)
+			}
+		}()
+	}
+
 	s.setupRand()
 
 	s.servers = []*dns.Server{}
@@ -109,7 +119,7 @@ func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 		poisoned := false
 		for _, ans := range in.Answer {
-			if a, ok := ans.(*dns.A); ok && s.config.BadHosts.isBad(a.A.String()) {
+			if a, ok := ans.(*dns.A); ok && s.config.PoisonHosts.isBad(a.A.String()) {
 				poisoned = true
 				break
 			}

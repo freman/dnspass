@@ -11,10 +11,11 @@ import (
 var emptyStruct = struct{}{}
 
 type config struct {
-	Listen   string
-	Trust    []string
-	Untrust  []string
-	BadHosts hostMap
+	AutoUpdatePoisonHosts bool
+	Listen                string
+	Trust                 []string
+	Untrust               []string
+	PoisonHosts           poisonMap
 }
 
 func (s *Server) loadConfig() error {

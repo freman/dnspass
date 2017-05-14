@@ -28,6 +28,34 @@ _Trust_ means that we trust those servers more so we'll belive them for a second
 
 You don't have to use google's servers as your trust, you can put any servers in there you trust, opendns for example.
 
+# Configuration file
+
+The config file is called config.toml
+
+It has few options, I'll go through them here
+
+## Listen _"localhost:53"_
+
+Probably best to keep this on localhost:53 unless you know what you're doing, this application has no built in security so keeping
+it configured to only listen on localhost stops other people (both in your network, and outside) from getting up to no good
+
+## AutoUpdatePoisonHosts _false_
+
+Set this to true if you want to pull the latest version of poisoned hosts when the app starts and every 24 hours after that.
+This is completely optional, the [source of the list](data/) is quite public so you can chose to manually update your config.toml file
+
+## Untrust _[]_
+
+This is a list of DNS servers you don't trust, usually your ISPs - in fact I have it by default set up for TPG [here](https://www.whatsmydns.net/dns/australia) is a list of DNS servers by ISP
+
+## Trust _[]_
+
+This is the list of DNS servers that you trust (if not completely, than more than your ISP) - I set them up for google
+
+## PoisonHosts _[]_
+
+This is the list of hosts that ISPs are known to poison answers with, this list is ignored if you use the AutoUpdatePoisonHosts option
+
 # Installing
 
 ## Windows
