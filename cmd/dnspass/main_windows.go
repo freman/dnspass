@@ -16,7 +16,7 @@ import (
 	"github.com/freman/dnspass"
 	"github.com/freman/eventloghook"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 

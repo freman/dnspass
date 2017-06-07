@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const dataURL = "https://raw.githubusercontent.com/freman/dnspass/master/data/poison.txt"
